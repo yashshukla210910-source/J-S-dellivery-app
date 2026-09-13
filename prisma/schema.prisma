@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String               @id @default(cuid())
+  phone            String               @unique
+  name             String
+  passwordHash     String
+  role             String               @default("USER") // USER, SHOPKEEPER, DELIVERY, ADMIN
+  location         String?              // Kothi, Jaitwar, Maihar
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  shops            Shop[]
+  orders           Order[]              @relation("CustomerOrders")
+  deliveries       DeliveryAssignment[] @relation("DeliveryBoyAssignments")
+  // Delivery Boy specific fields
+  availability     String?              @default("AVAILABLE") // AVAILABLE, BUSY, OFFLINE
+  activeOrderCount Int                  @default(0)
+}
+
+model Shop {
+  id             String    @id @default(cuid())
+  ownerId        String    @unique
+  name_en        String
+  name_hi        String?
+  description_en String?
+  description_hi String?
+  phone          String?
+  area           String    // Kothi, Jaitwar, Maihar
+  address        String?
+  image          String?
+  status                  String    @default("PENDING") // PENDING, ACTIVE, SUSPENDED
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  
+  // Phase 6: WhatsApp Catalog Fields
+  whatsappNumber          String?
+  whatsappCatalogEnabled  Boolean   @default(false)
+  whatsappCatalogTitle    String?
+  whatsappCatalogDescription String?
+  whatsappCatalogBanner   String?
+  whatsappCatalogStatus   String    @default("ACTIVE")
+  whatsappCatalogVerified Boolean   @default(false)
+
+  owner          User      @relation(fields: [ownerId], references: [id])
+  products       Product[]
+  orders         Order[]
+}
+
+model Product {
+  id             String      @id @default(cuid())
+  shopId         String
+  name_en        String
+  name_hi        String?
+  description_en String?
+  description_hi String?
+  price          Float
+  category       String      // Grocery, Dairy, Fruits & Vegetables, Snacks, Beverages, Personal Care, Household, Other
+  image          String?
+  isAvailable    Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  
+  // Phase 6: WhatsApp Catalog Fields
+  isCatalogVisible Boolean   @default(true)
+  catalogSortOrder Int       @default(0)
+
+  shop           Shop        @relation(fields: [shopId], references: [id])
+  orderItems     OrderItem[]
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique // LM-202609-000123
+  customerId      String
+  shopId          String
+  status          String      @default("PENDING") // PENDING, SHOPKEEPER_APPROVED, SHOPKEEPER_REJECTED, ADMIN_PENDING, ADMIN_APPROVED, AUTO_APPROVED, READY_FOR_DELIVERY, ASSIGNED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
+  cartValue       Float
+  deliveryFee     Float       @default(20)
+  totalAmount     Float
+  paymentMethod   String      @default("COD")
+  deliveryAddress String
+  customerName    String
+  customerPhone   String
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Phase 4 Admin Fields
+  adminDeadline   DateTime?
+  finalPrice      Float?
+  approvedBy      String?
+  approvedAt      DateTime?
+  approvalType    String?     // MANUAL, AUTO
+
+  customer        User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  shop            Shop        @relation(fields: [shopId], references: [id])
+  orderItems      OrderItem[]
+  delivery        DeliveryAssignment?
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  orderId        String
+  productId      String
+  productName_en String
+  productName_hi String?
+  quantity       Int
+  price          Float    // unit price at the time of order
+  subtotal       Float
+  order          Order    @relation(fields: [orderId], references: [id])
+  product        Product  @relation(fields: [productId], references: [id])
+}
+
+model DeliveryAssignment {
+  id            String   @id @default(cuid())
+  orderId       String   @unique
+  deliveryBoyId String
+  status        String   @default("ASSIGNED") // ASSIGNED, PICKED_UP, DELIVERED
+  assignedAt    DateTime @default(now())
+  order         Order    @relation(fields: [orderId], references: [id])
+  deliveryBoy   User     @relation("DeliveryBoyAssignments", fields: [deliveryBoyId], references: [id])
+}
