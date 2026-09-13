@@ -8,7 +8,8 @@
     "start": "node node_modules/next/dist/bin/next start",
     "lint": "eslint",
     "db:generate": "node node_modules/prisma/build/index.js generate",
-    "db:push": "node node_modules/prisma/build/index.js db push"
+    "db:push": "node node_modules/prisma/build/index.js db push",
+    "postinstall": "node node_modules/prisma/build/index.js generate"
   },
   "dependencies": {
     "@neon/config": "^1.4.2",
